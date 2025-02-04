@@ -1,22 +1,11 @@
 ---
 name: image
-# on:
-#   push:
-#     # Pattern matched against refs/tags
-#     tags:        
-#       - 'v*'  
-#     branches:
-#       - master
 on:
   push:
-    paths-ignore:
-      - "README.md"
-      - "LICENSE"
-      - "docs/**"
+    tags:        
+      - 'v*'  
     branches:
-      - master
-
-
+       - master
 
 jobs:
   deploy:
@@ -43,6 +32,6 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest,ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:test
+          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.ref }}
       - name: Image Digest
         run: echo ${{ steps.docker_build.outputs.digest }}
