@@ -1,0 +1,10 @@
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
+
+// clang-format off
+#define RAPTOR_DT_VERSION_MAJOR @raptor-dt_VERSION_MAJOR@
+#define RAPTOR_DT_VERSION_MINOR @raptor-dt_VERSION_MINOR@
+#define RAPTOR_DT_VERSION_PATCH @raptor-dt_VERSION_PATCH@
+// clang-format on
+
+#endif // __CONFIG_H__
