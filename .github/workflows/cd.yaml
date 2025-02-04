@@ -43,6 +43,6 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: ${{ github.repository }}:latest,${{ github.repository }}:test
+          tags: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest,ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:test
       - name: Image Digest
         run: echo ${{ steps.docker_build.outputs.digest }}
