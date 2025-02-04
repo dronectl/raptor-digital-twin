@@ -38,3 +38,11 @@ jobs:
           name: raptor
           path: build/raptor-dt
           retention-days: 5
+      - name: build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }} 
