@@ -1,0 +1,6 @@
+# root conf files
+README.md
+.gitignore
+build
+docs/
+.github/
