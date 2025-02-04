@@ -1,0 +1,40 @@
+---
+name: ci
+on:
+  push:
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+      - "docs/**"
+    branches:
+      - master
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches:
+      - master
+
+jobs:
+  build:
+    name: in-source build 
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: setup python3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13' 
+      - name: install python build dependancies
+        run: python3 -m pip install -r requirements.txt
+      - name: build
+        run: |
+          cmake -B build 
+          make -C build -j
+      - name: archive binary 
+        uses: actions/upload-artifact@v4
+        with:
+          name: raptor
+          path: build/raptor-dt
+          retention-days: 5
