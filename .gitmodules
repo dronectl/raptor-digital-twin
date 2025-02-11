@@ -1,0 +1,3 @@
+[submodule "src/protocols"]
+	path = src/protocols
+	url = git@github.com:dronectl/protocols.git
