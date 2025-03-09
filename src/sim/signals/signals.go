@@ -3,8 +3,6 @@ package signals
 import (
 	"math"
 	"math/rand"
-	"sync"
-	"time"
 )
 
 type SignalProcessor interface {
@@ -12,16 +10,17 @@ type SignalProcessor interface {
 }
 
 type NoiseParams struct {
-    Enabled bool
+    Enable bool
     Gain float64
     Offset float64
 }
 
 type Signal struct {
-    m sync.Mutex
-    t time.Time
     np NoiseParams
     out float64
+    t float64
+    UpdateFreq int // Hz
+    Enable bool
 }
 
 type SignalSin struct {
@@ -43,32 +42,38 @@ type SignalExp struct {
 
 // superimpose noise on output signal
 func (s *Signal)noiseGen() {
-    if s.np.Enabled {
-        s.out += s.np.Offset + s.np.Gain * rand.Float64()
+    if s.np.Enable {
+        // range [-1, 1]
+        gainSeed := rand.Float64() - rand.Float64()
+        s.out += s.np.Offset + (s.np.Gain * gainSeed)
     }
+}
+
+func (s *Signal)Reset() {
+    s.t = 0.0
 }
 
 // compute next sine signal valuu
 func (s *SignalSin)compute() float64 {
-    tdiff := time.Since(s.signal.t).Seconds() 
-    s.signal.out = s.Amplitude * math.Sin(s.Frequency * tdiff + s.Phase) + s.Offset
-    s.signal.t = time.Now()
+    s.signal.t += 1.0 / float64(s.signal.UpdateFreq)
+    s.signal.out = s.Amplitude * math.Sin((s.Frequency * s.signal.t) + s.Phase) + s.Offset
     return s.signal.out
 }
 
 // compute next exponential signal valuu
 func (s *SignalExp)compute() float64 {
-    tdiff := time.Since(s.signal.t).Seconds() 
-    s.signal.out = (s.Ref - s.signal.out)*(1.0 - math.Exp(-tdiff / s.Tau)) + s.signal.out
-    s.signal.t = time.Now()
+    s.signal.t += 1.0 / float64(s.signal.UpdateFreq)
+    s.signal.out = (s.Ref - s.signal.out)*(1.0 - math.Exp(-s.signal.t / s.Tau)) + s.signal.out
     return s.signal.out
 }
 
 // Process the signal with thread safety
 func Process(sp SignalProcessor, signal *Signal) float64 {
-	signal.m.Lock()
-	defer signal.m.Unlock()
-	signal.out = sp.compute()
+    if signal.Enable {
+        signal.out = sp.compute()
+    } else {
+        signal.out = 0.0
+    }
 	signal.noiseGen()
 	return signal.out
 }
