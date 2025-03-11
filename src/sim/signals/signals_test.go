@@ -30,12 +30,12 @@ func TestSignalProcessExp(t *testing.T) {
         exp.Ref = ref
         exp.signal.Reset()
         for range 10 {
+            // run process
+            v := Process(exp, &exp.signal)
             // calculate expected signal value
             base := (exp.Ref - exp.signal.out)*(1.0 - math.Exp(-exp.signal.t/ exp.Tau)) + exp.signal.out
             noiseLower := -exp.signal.np.Gain + exp.signal.np.Offset + base
             noiseUpper := exp.signal.np.Gain + exp.signal.np.Offset + base
-            // run process
-            v := Process(exp, &exp.signal)
             if v != exp.signal.out {
                 t.Errorf("Expected %f got %f", exp.signal.out, v)
                 break
@@ -55,15 +55,16 @@ func TestSignalProcessSin(t *testing.T) {
         amplitude float64 = 12.0
         offset float64 = 12.0
         phase float64 = 0.0 
-        frequency float64 = math.Pi
-        noiseGain float64 = 0.0
-        noiseOffset float64 = 0.0
+        frequency float64 = 1000.0
+        noiseGain float64 = 1.0
+        noiseOffset float64 = 0.1
     ) 
     sin := &SignalSin{
         signal: Signal{
             np: NoiseParams{Enable: true, Offset: noiseOffset, Gain: noiseGain},
             out: initial,
-            UpdateFreq: 1000,
+            UpdateFreq: 10000,
+            Enable: true,
         },
         Amplitude: amplitude,
         Offset: offset,
@@ -71,20 +72,19 @@ func TestSignalProcessSin(t *testing.T) {
         Phase: phase,
     }
     for range 10 {
-        // calculate sin.cted signal value
-        base := sin.Amplitude * math.Sin((sin.Frequency * sin.signal.t) + sin.Phase) + sin.Offset
-        noiseLower := -sin.signal.np.Gain + sin.signal.np.Offset + base
-        noiseUpper := sin.signal.np.Gain + sin.signal.np.Offset + base
         // run process
         v := Process(sin, &sin.signal)
+        base := sin.Amplitude * math.Sin((math.Pi * 2 * sin.Frequency * sin.signal.t) + sin.Phase) + sin.Offset
+        noiseLower := -sin.signal.np.Gain + sin.signal.np.Offset + base
+        noiseUpper := sin.signal.np.Gain + sin.signal.np.Offset + base
         if v != sin.signal.out {
             t.Errorf("Expected %f got %f", sin.signal.out, v)
             break
         }
         t.Logf("signal: %f expected: %f, range: [%f, %f]", v, base, noiseLower, noiseUpper)
         if v > noiseUpper || v < noiseLower {
-            //t.Errorf("Signal out of tolerance: got %f expected within range [%f %f]", v, noiseLower, noiseUpper)
-            //break
+            t.Errorf("Signal out of tolerance: got %f expected within range [%f %f]", v, noiseLower, noiseUpper)
+            break
         }
     }
 }

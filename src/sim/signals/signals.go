@@ -56,7 +56,7 @@ func (s *Signal)Reset() {
 // compute next sine signal valuu
 func (s *SignalSin)compute() float64 {
     s.signal.t += 1.0 / float64(s.signal.UpdateFreq)
-    s.signal.out = s.Amplitude * math.Sin((s.Frequency * s.signal.t) + s.Phase) + s.Offset
+    s.signal.out = s.Amplitude * math.Sin((2 * math.Pi * s.Frequency * s.signal.t) + s.Phase) + s.Offset
     return s.signal.out
 }
 
