@@ -4,18 +4,17 @@ import (
 	"sync"
 
 	"github.com/dronectl/rdt/internal/common"
-	"github.com/dronectl/rdt/internal/sim/propeller"
+	"github.com/dronectl/rdt/internal/sim/powertrain/propeller"
 )
 
 type Bldc struct {
     m sync.Mutex
-    params common.BldcParameters
+    params *common.BldcParameters
+    env *common.EnvParameters
     propeller *propeller.PropellerCtx
     Current float64 // A
     Torque float64
     Speed uint32
-    kt float64 // Nm/A
-    ke float64 // V/(rad/s)
 }
 
 func (b *Bldc) ProcessState(voltage float64) {
@@ -27,12 +26,11 @@ func (b *Bldc) ProcessState(voltage float64) {
     b.m.Unlock()
 }
 
-func NewBldc(bldcParams common.BldcParameters, propParams common.PropellerParameters, kt float64, ke float64, rho float64, cTAlpha float64, cTBeta float64) *Bldc {
+func NewBldc(bldcParams *common.BldcParameters, propParams *common.PropellerParameters, envParams *common.EnvParameters) *Bldc {
     return &Bldc{
         params: bldcParams,
-        propeller: propeller.NewPropeller(propParams, rho, cTAlpha, cTBeta),
-        kt: kt,
-        ke: ke,
+        propeller: propeller.NewPropeller(propParams, envParams.Rho),
+        env: envParams,
     }
 }
 

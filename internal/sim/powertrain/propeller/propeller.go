@@ -2,11 +2,11 @@ package propeller
 
 import (
     "math"
-    "github.com/dronectl/rdt/sim/common"
+    "github.com/dronectl/rdt/internal/common"
 )
 
 type PropellerCtx struct {
-    params common.PropellerParameters
+    params *common.PropellerParameters
     rho float64 // air density
     torque float64 // Nm
     cTAlpha float64
@@ -19,18 +19,16 @@ func omegaToRpm(omega float64) float64 {
 }
 
 func estimateCt(p *PropellerCtx) {
-    p.cT = p.cTAlpha * (p.params.Pitch / p.params.Diameter) + p.cTBeta
+    p.cT = p.params.CtGain * (p.params.Pitch / p.params.Diameter) + p.params.CtOffset
 }
 
 func (p *PropellerCtx) ComputeTorque(omega float64) float64 {
     return p.cT * p.rho * math.Pow(p.params.Diameter, 5) * math.Pow(omega, 2)
 }
 
-func NewPropeller(params common.PropellerParameters, rho float64, cTAlpha float64, cTBeta float64) *PropellerCtx {
+func NewPropeller(params *common.PropellerParameters, rho float64) *PropellerCtx {
     return &PropellerCtx{
         params: params,
         rho: rho,
-        cTAlpha: cTAlpha,
-        cTBeta: cTBeta,
     }
 }
