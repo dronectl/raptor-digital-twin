@@ -1,7 +1,7 @@
 package sim
 
 import (
-	sg "github.com/dronectl/raptor-digital-twin/sim/signals"
+	sg "github.com/dronectl/rdt/sim/signals"
 )
 
 type Environment struct {
