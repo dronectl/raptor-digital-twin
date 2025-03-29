@@ -1,0 +1,8 @@
+version: v2
+managed:
+  enabled: true
+plugins:
+  - remote: buf.build/community/nanopb:v0.4.9
+    out: gen/c
+  - remote: buf.build/protocolbuffers/pyi:v29.3
+    out: gen/python

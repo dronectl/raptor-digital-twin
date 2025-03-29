@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package raptor.v1;
+
+// relay states
+enum RelayId {
+  // reserved
+  RELAY_ID_UNSPECIFIED = 0;
+
+  // power train relay
+  RELAY_ID_POWERTRAIN = 1;
+  // battery relay
+  RELAY_ID_BATTERY = 2;
+  // auxiliary power relay
+  RELAY_ID_AUX = 3;
+}
+
+// relay states
+enum RelayState {
+  // reserved
+  RELAY_STATE_UNSPECIFIED = 0;
+
+  RELAY_STATE_OPENED = 1;
+  RELAY_STATE_CLOSED = 2;
+}
+
+// relay commands
+enum RelayCommand {
+  // reserved
+  RELAY_COMMAND_UNSPECIFIED = 0;
+
+  RELAY_COMMAND_OPEN = 1;
+  RELAY_COMMAND_CLOSE = 2;
+}
+
+message RelayTelemetry {
+  // array of relay states indexed by RelayId
+  repeated RelayState relay_states = 1;
+}

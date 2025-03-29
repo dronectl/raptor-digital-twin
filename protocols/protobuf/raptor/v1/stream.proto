@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package raptor.v1;
+
+import "raptor/v1/env.proto";
+
+enum StreamControl {
+  STREAM_CONTROL_UNSPECIFIED = 0;
+  STREAM_CONTROL_START = 1;
+  STREAM_CONTROL_SYNC = 2;
+  STREAM_CONTROL_STOP = 3;
+}
+
+message StreamHeader {
+  uint32 profile_id = 1; // active profile id
+  uint32 sequence = 2; // stream transmission sequence number
+  uint32 payload_size = 3; // size of payload in bytes
+  uint32 crc32 = 4; // crc32 checksum
+}
+
+message ChannelMetadata {
+  uint32 timestamp = 1; // timestamp of first sample
+  uint32 sample_frequency = 2; // sample frequency in Hz
+}
+
+// channel groupings are based on sample speed
+
+// TODO: need to work on strategy for scaling of stream data
+// could do like fast medium slow
+// -> but if there are interim sampling speeds I would need to add a fast-medium or medium-slow steps which sucks
+
+message Channel1 {
+  ChannelMetadata meta = 1;
+  repeated float current = 2; // A
+  repeated float voltage = 3; // V
+}
+
+message Channel2 {
+  ChannelMetadata meta = 1;
+  repeated float torque = 2; // N
+  repeated float thrust = 3; // N
+  repeated float rpm = 4; // rpm
+}
+
+/**
+ * All profile related data must be included in this payload
+ **/
+message StreamData {
+  StreamHeader header = 1;
+  EnvironmentTelemetry environment = 2;
+  Channel1 channel1 = 3;
+  Channel2 channel2 = 4;
+}

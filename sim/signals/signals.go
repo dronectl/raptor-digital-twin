@@ -16,23 +16,24 @@ type NoiseParams struct {
 }
 
 type BaseSignal struct {
-    Noise NoiseParams
+    noise NoiseParams
     out float64
     t float64
-    UpdateFreq int // Hz
+    offset float64
     enable bool
+    UpdateFreq int // Hz
 }
 
 // superimpose noise on output signal
 func (s *BaseSignal)applyNoise() {
     // range [-1, 1]
     gainSeed := rand.Float64() - rand.Float64()
-    s.out += s.Noise.Offset + (s.Noise.Gain * gainSeed)
+    s.out += s.noise.Offset + (s.noise.Gain * gainSeed)
 }
 
 func (s *BaseSignal)Enable(enable bool) {
     s.t = 0.0
-    s.out = 0.0
+    s.out = s.offset
     s.enable = enable
 }
 
@@ -41,7 +42,6 @@ type SignalSin struct {
     BaseSignal
 
     Amplitude float64
-    Offset float64
     Frequency float64 // rads
     Phase float64 // rads
 }
@@ -52,7 +52,7 @@ func (s *SignalSin)compute() {
         return
     }
     s.t += 1.0 / float64(s.UpdateFreq)
-    s.out = s.Amplitude * math.Sin((2 * math.Pi * s.Frequency * s.t) + s.Phase) + s.Offset
+    s.out = s.Amplitude * math.Sin((2 * math.Pi * s.Frequency * s.t) + s.Phase) + s.offset
 }
 
 func (s *SignalSin)Process() float64 {
@@ -61,17 +61,17 @@ func (s *SignalSin)Process() float64 {
     return s.out
 }
 
-func NewSignalSin(amplitude, offset, freq, phase float64, updateFreq int) *SignalSin {
+func NewSignalSin(amplitude, offset, freq, phase float64, noiseParams NoiseParams, updateFreq int) *SignalSin {
     return &SignalSin{
         BaseSignal: BaseSignal{
-            Noise: NoiseParams{Offset: 0.0, Gain: 0.0},
+            noise: noiseParams,
             out: 0.0,
             t: 0.0,
             enable: false,
+            offset: offset,
             UpdateFreq: updateFreq,
         },
         Amplitude: amplitude,
-        Offset: offset,
         Frequency: freq,
         Phase: phase,
     }
@@ -101,18 +101,18 @@ func (s *SignalExp)Process() float64 {
     return s.out
 }
 
-
-func NewSignalExp(tau float64, updateFreq int) *SignalExp {
+func NewSignalExp(tau, offset float64, np NoiseParams, updateFreq int) *SignalExp {
     return &SignalExp{
         BaseSignal: BaseSignal{
-            Noise: NoiseParams{Offset: 0.0, Gain: 0.0},
+            noise: np,
             out: 0.0,
             t: 0.0,
             enable: false,
+            offset: offset,
             UpdateFreq: updateFreq,
         },
         Tau: tau,
-        Ref: 0.0,
+        Ref: offset,
     }
 }
 

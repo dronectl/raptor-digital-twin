@@ -1,0 +1,5 @@
+Channel1.current max_count:50
+Channel1.voltage max_count:50
+Channel2.torque max_count:50
+Channel2.thrust max_count:50
+Channel2.rpm max_count:50

@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package raptor.v1;
+
+import "raptor/v1/signals.proto";
+
+enum ProfilePowerSource {
+  // reserved
+  PROFILE_POWER_SOURCE_UNSPECIFIED = 0;
+
+  PROFILE_POWER_SOURCE_BATTERY = 1;
+  PROFILE_POWER_SOURCE_AUX = 2;
+}
+
+// profile modulation type
+enum ProfileModulation {
+  // reserved
+  PROFILE_MODULATION_UNSPECIFIED = 0;
+
+  PROFILE_MODULATION_PIECEWISE = 1;
+  PROFILE_MODULATION_MODE_SINE = 2;
+}
+
+message ProfileModulationPiecewise {
+  // sequence repetitions
+  uint32 iterations = 1;
+  // target value
+  repeated float value = 2;
+  // duration of step in (ms)
+  repeated uint32 duration = 3;
+  // rate of change for target step
+  repeated uint32 slew = 4;
+}
+
+message ProfileModulationSine {
+  // duration of sine wave
+  uint32 duration = 1;
+  // waveform amplitude
+  float amplitude = 2;
+  // waveform frequency (Hz)
+  uint32 frequency = 3;
+}
+
+message ProfileTripConditions {
+  // signal identifier
+  SignalId signal_id = 1;
+  float min = 2;
+  float max = 3;
+  uint32 violations = 4;
+  float cumulative_max = 5;
+}
+
+message ProfilePayload {
+  // profile id
+  uint32 id = 1;
+  // profile trip conditions
+  repeated ProfileTripConditions trip_conditions = 2;
+  // power source
+  ProfilePowerSource source = 3;
+  // profile modulation type
+  ProfileModulation modulation = 4;
+  // modulation payload multiplexor
+  oneof modulation_payload {
+    ProfileModulationSine sine = 5;
+    ProfileModulationPiecewise piecewise = 6;
+  }
+}
