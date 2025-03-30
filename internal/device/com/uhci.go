@@ -1,14 +1,14 @@
-
 package com
 
 import (
-    "os"
-    "log"
-    "net"
+	"fmt"
+	"log"
+	"net"
+	"os"
 
-    "github.com/dronectl/rdt/gen/raptor/v1"
+	v1 "github.com/dronectl/rdt/gen/raptor/v1"
+    proto "google.golang.org/protobuf/proto"
 )
-
 
 type UHCICtx struct {
     logger *log.Logger
@@ -17,7 +17,7 @@ type UHCICtx struct {
 }
 
 func (u *UHCICtx) startDiscoveryService() error {
-    u.logger.Println("Starting UDP discovery Service")
+    u.logger.Println("Starting UDP discovery service")
     for {
         buf := make([]byte, 1024)
         n, addr, err := u.conn.ReadFromUDP(buf)
@@ -28,13 +28,30 @@ func (u *UHCICtx) startDiscoveryService() error {
     }
 }
 
+func (u *UHCICtx) handleConnection(conn net.Conn) {
+    defer conn.Close()
+    buf := make([]byte, 1024)
+    _, err := conn.Read(buf)
+    if err != nil {
+        u.logger.Println(err)
+        return
+    }
+
+    u.logger.Printf("Received: %s", buf)
+    req := &v1.UHCIBaseRequest{}
+    if err := proto.Unmarshal(buf, req); err != nil {
+        log.Fatalln("Failed to parse address book:", err)
+    }
+    u.logger.Printf("Marshalled: %t", req)
+}
+
 func (u *UHCICtx) startCommandService() error {
+    u.logger.Println("Starting TCP command service")
     // Listen for incoming connections on port 8080
-    v1.CommandBaseRequest_DeviceMetadata
-    ln, err := net.Listen("tcp", ":8080")
+    ln, err := net.Listen("tcp", fmt.Sprintf(":%u", v1.UHCIPort_UHCI_PORT_COMMAND))
     if err != nil {
         fmt.Println(err)
-        return
+        return err
     }
 
     // Accept incoming connections and handle them
@@ -46,13 +63,13 @@ func (u *UHCICtx) startCommandService() error {
         }
 
         // Handle the connection in a new goroutine
-        go handleConnection(conn)
+        go u.handleConnection(conn)
     }
 }
 
 func (u *UHCICtx) Start() error {
     go u.startDiscoveryService()
-
+    u.startCommandService()
     return nil
 }
 
