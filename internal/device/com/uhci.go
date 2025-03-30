@@ -1,3 +1,9 @@
+//*
+// uHCI Micro Host Controller Interface
+// ------------------------------------
+//
+// Copyright © 2025 dronectl
+
 package com
 
 import (
@@ -17,12 +23,30 @@ type UHCICtx struct {
 }
 
 func (u *UHCICtx) startDiscoveryService() error {
-    u.logger.Println("Starting UDP discovery service")
+    u.logger.Printf("Starting UDP discovery service on port %d", v1.UHCIPort_UHCI_PORT_DISCOVERY)
+    addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", v1.UHCIPort_UHCI_PORT_DISCOVERY))
+    if err != nil {
+        u.logger.Fatalln("Error resolving address:", err)
+    }
+
+    conn, err := net.ListenUDP("udp", addr)
+    if err != nil {
+        u.logger.Fatalln("Error creating connection:", err)
+    }
+    defer conn.Close()
+    fmt.Println("UDP server is up and listening on port 8080")
+
+    buffer := make([]byte, 1024)
     for {
-        buf := make([]byte, 1024)
-        n, addr, err := u.conn.ReadFromUDP(buf)
+        n, remoteAddr, err := conn.ReadFromUDP(buffer)
         if err != nil {
-            u.logger.Println("Error reading from UDP connection")
+            fmt.Println("Error reading from UDP connection:", err)
+            continue
+        }
+        fmt.Printf("Received message from %s: %s\n", remoteAddr, string(buffer[:n]))
+        _, err = conn.WriteToUDP([]byte("Message received"), remoteAddr)
+        if err != nil {
+            fmt.Println("Error responding to client:", err)
             continue
         }
     }
@@ -40,7 +64,7 @@ func (u *UHCICtx) handleConnection(conn net.Conn) {
     u.logger.Printf("Received: %s", buf)
     req := &v1.UHCIBaseRequest{}
     if err := proto.Unmarshal(buf, req); err != nil {
-        log.Fatalln("Failed to parse address book:", err)
+        log.Println("Failed to parse address book:", err)
     }
     u.logger.Printf("Marshalled: %t", req)
 }
