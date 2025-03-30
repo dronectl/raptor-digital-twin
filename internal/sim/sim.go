@@ -21,19 +21,21 @@ type SimCtx struct {
     powertrainCtx *powertrain.PowertrainCtx
     prescaleCounter uint8
 
-    channels common.IPCChannels
+    // channels
+    control <-chan common.SimControl
+    powertrainReadings chan<- common.PowertrainReadings
+    envReadings chan<- common.EnvironmentReadings
 }
 
 func (s *SimCtx) runner() {
-    defer close(s.channels.Control)
-    defer close(s.channels.PowertrainReadings)
-    defer close(s.channels.EnvironmentReadings)
+    defer close(s.powertrainReadings)
+    defer close(s.envReadings)
     s.prescaleCounter = s.samplePrescaler
     for {
         cmd := common.SIM_CMD_NULL
         // non-blocking read
         select {
-            case cmd = <- s.channels.Control:
+            case cmd = <- s.control:
                 s.logger.Println("Sim: Received command ", cmd)
             default:
         }
@@ -43,7 +45,7 @@ func (s *SimCtx) runner() {
         readings := s.powertrainCtx.ProcessState()
         // apply sample prescaling
         if s.prescaleCounter == 1 {
-            s.channels.PowertrainReadings <- readings
+            s.powertrainReadings <- readings
             s.prescaleCounter = s.samplePrescaler
         } else {
             s.prescaleCounter--
@@ -58,7 +60,7 @@ func (s *SimCtx) Start() {
     go s.runner()
 }
 
-func NewSimCtx(updateFrequency uint32, samplePrescaler uint8, channels common.IPCChannels) *SimCtx {
+func NewSimCtx(updateFrequency uint32, samplePrescaler uint8, control <-chan common.SimControl, powertrainReadings chan<- common.PowertrainReadings, envReadings chan<- common.EnvironmentReadings) *SimCtx {
     simCtx:= SimCtx{
         logger: log.New(os.Stdout, "", log.Lshortfile | log.Lmicroseconds),
         bldcParameters: common.DefaultBldcParameters,
@@ -66,7 +68,9 @@ func NewSimCtx(updateFrequency uint32, samplePrescaler uint8, channels common.IP
         propellerParameters: common.DefaultPropellerParameters,
         samplePrescaler: samplePrescaler,
         updateFrequency: updateFrequency,
-        channels: channels,
+        control: control,
+        powertrainReadings: powertrainReadings,
+        envReadings: envReadings,
     }
     // pass references to the configurability layer so changes are parameterically applied
     simCtx.powertrainCtx = powertrain.NewPowertrain(&simCtx.bldcParameters, &simCtx.propellerParameters, &simCtx.envParameters)

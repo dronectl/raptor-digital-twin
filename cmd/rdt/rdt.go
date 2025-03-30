@@ -12,13 +12,14 @@ import (
 func main() {
     logger := log.New(os.Stdout, "", log.Lshortfile | log.Lmicroseconds)
     logger.Println("dronectl - Raptor Digital Twin");
-    channels := common.IPCChannels{
-        Control: make(chan common.SimControl),
-        PowertrainReadings: make(chan common.PowertrainReadings),
-        EnvironmentReadings: make(chan common.EnvironmentReadings),
-    }
-    device := device.NewDevice(10, channels)
-    sim := sim.NewSimCtx(100, 10, channels)
+    // build sync primitives
+    control := make(chan common.SimControl)
+    powertrainReadings:= make(chan common.PowertrainReadings)
+    envReadings:= make(chan common.EnvironmentReadings)
+    // init device and sim emulation engines
+    device := device.NewDevice(10, control, powertrainReadings, envReadings)
+    sim := sim.NewSimCtx(100, 10, control, powertrainReadings, envReadings)
     sim.Start()
+    // main thread of execution
     device.Start()
 }
