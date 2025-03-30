@@ -1,7 +1,8 @@
 package sim
 
 import (
-	"fmt"
+    "os"
+	"log"
 	"time"
 
 	common "github.com/dronectl/rdt/internal/common"
@@ -9,28 +10,32 @@ import (
 )
 
 type SimCtx struct {
+    logger *log.Logger
     // configurability layer
     envParameters common.EnvParameters
     propellerParameters common.PropellerParameters
     bldcParameters common.BldcParameters
 
-    control chan common.SimControl
-    powertrainReadings chan common.PowertrainReadings
     updateFrequency uint32 // Hz
     samplePrescaler uint8
     powertrainCtx *powertrain.PowertrainCtx
     prescaleCounter uint8
+
+    channels common.IPCChannels
 }
 
 func (s *SimCtx) runner() {
-    defer close(s.powertrainReadings)
-    defer close(s.control)
+    defer close(s.channels.Control)
+    defer close(s.channels.PowertrainReadings)
+    defer close(s.channels.EnvironmentReadings)
     s.prescaleCounter = s.samplePrescaler
     for {
         cmd := common.SIM_CMD_NULL
+        // non-blocking read
         select {
-            case cmd := <- s.control:
-                fmt.Println("received command", cmd)
+            case cmd = <- s.channels.Control:
+                s.logger.Println("Sim: Received command ", cmd)
+            default:
         }
         if cmd == common.SIM_CMD_STOP {
             break
@@ -38,30 +43,30 @@ func (s *SimCtx) runner() {
         readings := s.powertrainCtx.ProcessState()
         // apply sample prescaling
         if s.prescaleCounter == 1 {
-            s.powertrainReadings <- readings
+            s.channels.PowertrainReadings <- readings
             s.prescaleCounter = s.samplePrescaler
         } else {
             s.prescaleCounter--
         }
         time.Sleep(time.Duration(1000/s.updateFrequency) * time.Millisecond)
     }
-    fmt.Println("Exited simulation")
+    s.logger.Println("Exited simulation")
 }
 
 func (s *SimCtx) Start() {
-    fmt.Println("Starting simulation backend")
+    s.logger.Println("Starting simulation backend")
     go s.runner()
 }
 
-func NewSimCtx(updateFrequency uint32, samplePrescaler uint8, powertrainChannel chan common.PowertrainReadings, control chan common.SimControl) *SimCtx {
+func NewSimCtx(updateFrequency uint32, samplePrescaler uint8, channels common.IPCChannels) *SimCtx {
     simCtx:= SimCtx{
+        logger: log.New(os.Stdout, "", log.Lshortfile | log.Lmicroseconds),
         bldcParameters: common.DefaultBldcParameters,
         envParameters: common.DefaultEnvParameters,
         propellerParameters: common.DefaultPropellerParameters,
         samplePrescaler: samplePrescaler,
         updateFrequency: updateFrequency,
-        control: control,
-        powertrainReadings: powertrainChannel,
+        channels: channels,
     }
     // pass references to the configurability layer so changes are parameterically applied
     simCtx.powertrainCtx = powertrain.NewPowertrain(&simCtx.bldcParameters, &simCtx.propellerParameters, &simCtx.envParameters)

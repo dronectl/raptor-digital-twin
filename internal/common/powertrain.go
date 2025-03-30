@@ -1,5 +1,3 @@
-// common structures between device and sim packages
-
 package common
 
 type PowertrainReadings struct {
@@ -19,4 +17,3 @@ type PowertrainReadings struct {
     Efficiency float64 // %
 	Temperature  float64 // C
 }
-
