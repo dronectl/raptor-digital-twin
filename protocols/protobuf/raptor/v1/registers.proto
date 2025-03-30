@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package raptor.v1;
-
-enum RegisterId {
-  // reserved
-  REGISTER_ID_UNSPECIFIED = 0;
-}
