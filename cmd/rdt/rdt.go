@@ -24,10 +24,10 @@ func main() {
 	powertrainReadings := make(chan common.PowertrainReadings)
 	envReadings := make(chan common.EnvironmentReadings)
 	// init device and sim emulation engines
-	deviceOpts := device.DeviceOpts{UpdateFrequency: 1}
-	simOpts := sim.SimOpts{UpdateFrequency: 10, SamplePrescaler: 10}
-	device := device.NewDevice(control, powertrainReadings, envReadings, &deviceOpts)
-	sim := sim.NewSimCtx(control, powertrainReadings, envReadings, &simOpts)
+	deviceOpts := &device.DeviceOpts{UpdateFrequency: 1}
+	simOpts := &sim.SimOpts{UpdateFrequency: 10, SamplePrescaler: 10}
+	device := device.NewDevice(control, powertrainReadings, envReadings, deviceOpts)
+	sim := sim.NewSimCtx(control, powertrainReadings, envReadings, simOpts)
 	sim.Start()
 	// main thread of execution
 	device.Start()

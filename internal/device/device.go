@@ -1,15 +1,22 @@
 package device
 
 import (
-	"github.com/google/uuid"
-	"log/slog"
 	"time"
+	"log/slog"
+	"github.com/google/uuid"
 
 	"github.com/dronectl/rdt/internal/common"
+	com "github.com/dronectl/rdt/internal/device/com"
 )
 
 type DeviceOpts struct {
 	UpdateFrequency uint32
+}
+
+type DeviceVersion struct {
+    Major uint32
+    Minor uint32
+    Patch uint32
 }
 
 type Device struct {
@@ -18,7 +25,10 @@ type Device struct {
 	name            string
 	uuid            string
 	updateFrequency uint32 // Hz
+    hwVersion      DeviceVersion
+    fwVersion      DeviceVersion
 
+    uhciHandle *com.UHCIHandle
 	// channels
 	control            chan<- common.SimControl
 	powertrainReadings <-chan common.PowertrainReadings
@@ -40,6 +50,7 @@ func (d *Device) runner() {
 
 func (d *Device) Start() {
 	d.logger.Info("Starting device emulator")
+    d.uhciHandle.Start()
 	d.runner()
 }
 
@@ -52,6 +63,7 @@ func NewDevice(control chan<- common.SimControl, powertrainReadings <-chan commo
 		control:            control,
 		powertrainReadings: powertrainReadings,
 		envReadings:        envReadings,
+        uhciHandle:         com.NewUHCIHandle(),
 	}
 	device.logger.Info("New device created", "uuid", device.uuid)
 	return &device

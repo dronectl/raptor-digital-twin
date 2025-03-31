@@ -15,13 +15,13 @@ import (
 	proto "google.golang.org/protobuf/proto"
 )
 
-type UHCICtx struct {
+type UHCIHandle struct {
 	logger *slog.Logger
 	conn   *net.UDPConn
 	addr   *net.UDPAddr
 }
 
-func (u *UHCICtx) startDiscoveryService() error {
+func (u *UHCIHandle) startDiscoveryService() error {
 	u.logger.Info("Starting UDP discovery service", "port", v1.UHCIPort_UHCI_PORT_DISCOVERY)
 	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", v1.UHCIPort_UHCI_PORT_DISCOVERY))
 	if err != nil {
@@ -35,25 +35,58 @@ func (u *UHCICtx) startDiscoveryService() error {
 		return err
 	}
 	defer conn.Close()
-	fmt.Println("UDP server is up and listening on port 8080")
-
+	u.logger.Debug("UDP server is up and listening", "port", v1.UHCIPort_UHCI_PORT_DISCOVERY)
 	buffer := make([]byte, 1024)
 	for {
 		n, remoteAddr, err := conn.ReadFromUDP(buffer)
 		if err != nil {
-			u.logger.Warn("Error reading from UDP connection:", "error", err)
+			u.logger.Error("Error reading from UDP connection:", "error", err)
 			continue
 		}
-		fmt.Printf("Received message from %s: %s\n", remoteAddr, string(buffer[:n]))
-		_, err = conn.WriteToUDP([]byte("Message received"), remoteAddr)
+		u.logger.Info("Received message", "bytes", n, "addr", remoteAddr, "buf", buffer)
+        req := &v1.UHCIBaseRequest{}
+        resp := &v1.UHCIBaseResponse{}
+        if err := proto.Unmarshal(buffer, req); err != nil {
+            u.logger.Error("Failed to unmarshal request", "error", err)
+            resp.Status = v1.UHCIStatus_UHCI_STATUS_DECODE_ERR
+        } else {
+            resp.Status = v1.UHCIStatus_UHCI_STATUS_OK
+            resp.ResponseMux = &v1.UHCIBaseResponse_Uhci{
+                Uhci: &v1.UHCIProtocolResponse{
+                    Status: v1.UHCIProtocolStatus_UHCI_PROTOCOL_STATUS_OK,
+                    ResponseMux: &v1.UHCIProtocolResponse_Discovery{
+                        Discovery: &v1.UHCIDiscoveryResponse{
+                            Device: &v1.DeviceMetadata{
+                                Uuid: 12345678,
+                                FirmwareVersion: &v1.Version{
+                                    Major: 1,
+                                    Minor: 0,
+                                    Patch: 0,
+                                },
+                                HardwareVersion: &v1.Version{
+                                    Major: 1,
+                                    Minor: 0,
+                                    Patch: 0,
+                                },
+                                DigitalTwin: true,
+                            },
+                        },
+                    },
+                },
+            }
+        }
+        respBuffer, err := proto.Marshal(resp)
+        if err != nil {
+            u.logger.Error("Failed to marshal response", "error", err)
+        }
+		_, err = conn.WriteToUDP(respBuffer, remoteAddr)
 		if err != nil {
-			fmt.Println("Error responding to client:", err)
-			continue
+			u.logger.Error("Error responding to client", "error", err)
 		}
 	}
 }
 
-func (u *UHCICtx) handleConnection(conn net.Conn) {
+func (u *UHCIHandle) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	buf := make([]byte, 1024)
 	_, err := conn.Read(buf)
@@ -70,36 +103,30 @@ func (u *UHCICtx) handleConnection(conn net.Conn) {
 	u.logger.Info("Marshalled: ", "req", req)
 }
 
-func (u *UHCICtx) startCommandService() error {
+func (u *UHCIHandle) startCommandService() error {
 	u.logger.Info("Starting TCP command service")
-	// Listen for incoming connections on port 8080
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", v1.UHCIPort_UHCI_PORT_COMMAND))
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-
-	// Accept incoming connections and handle them
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			fmt.Println(err)
+			u.logger.Error("Failed to accept connection", "error", err, "conn", conn)
 			continue
 		}
-
-		// Handle the connection in a new goroutine
 		go u.handleConnection(conn)
 	}
 }
 
-func (u *UHCICtx) Start() error {
+func (u *UHCIHandle) Start() {
 	go u.startDiscoveryService()
-	u.startCommandService()
-	return nil
+	go u.startCommandService()
 }
 
-func NewUHCI() *UHCICtx {
-	return &UHCICtx{
+func NewUHCIHandle() *UHCIHandle {
+	return &UHCIHandle{
 		logger: slog.Default(),
 	}
 }
