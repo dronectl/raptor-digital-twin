@@ -44,41 +44,41 @@ func (u *UHCIHandle) startDiscoveryService() error {
 			continue
 		}
 		u.logger.Info("Received message", "bytes", n, "addr", remoteAddr, "buf", buffer)
-        req := &v1.UHCIBaseRequest{}
-        resp := &v1.UHCIBaseResponse{}
-        if err := proto.Unmarshal(buffer, req); err != nil {
-            u.logger.Error("Failed to unmarshal request", "error", err)
-            resp.Status = v1.UHCIStatus_UHCI_STATUS_DECODE_ERR
-        } else {
-            resp.Status = v1.UHCIStatus_UHCI_STATUS_OK
-            resp.ResponseMux = &v1.UHCIBaseResponse_Uhci{
-                Uhci: &v1.UHCIProtocolResponse{
-                    Status: v1.UHCIProtocolStatus_UHCI_PROTOCOL_STATUS_OK,
-                    ResponseMux: &v1.UHCIProtocolResponse_Discovery{
-                        Discovery: &v1.UHCIDiscoveryResponse{
-                            Device: &v1.DeviceMetadata{
-                                Uuid: 12345678,
-                                FirmwareVersion: &v1.Version{
-                                    Major: 1,
-                                    Minor: 0,
-                                    Patch: 0,
-                                },
-                                HardwareVersion: &v1.Version{
-                                    Major: 1,
-                                    Minor: 0,
-                                    Patch: 0,
-                                },
-                                DigitalTwin: true,
-                            },
-                        },
-                    },
-                },
-            }
-        }
-        respBuffer, err := proto.Marshal(resp)
-        if err != nil {
-            u.logger.Error("Failed to marshal response", "error", err)
-        }
+		req := &v1.UHCIBaseRequest{}
+		resp := &v1.UHCIBaseResponse{}
+		if err := proto.Unmarshal(buffer, req); err != nil {
+			u.logger.Error("Failed to unmarshal request", "error", err)
+			resp.Status = v1.UHCIStatus_UHCI_STATUS_DECODE_ERR
+		} else {
+			resp.Status = v1.UHCIStatus_UHCI_STATUS_OK
+			resp.ResponseMux = &v1.UHCIBaseResponse_Uhci{
+				Uhci: &v1.UHCIProtocolResponse{
+					Status: v1.UHCIProtocolStatus_UHCI_PROTOCOL_STATUS_OK,
+					ResponseMux: &v1.UHCIProtocolResponse_Discovery{
+						Discovery: &v1.UHCIDiscoveryResponse{
+							Device: &v1.DeviceMetadata{
+								Uuid: 12345678,
+								FirmwareVersion: &v1.Version{
+									Major: 1,
+									Minor: 0,
+									Patch: 0,
+								},
+								HardwareVersion: &v1.Version{
+									Major: 1,
+									Minor: 0,
+									Patch: 0,
+								},
+								DigitalTwin: true,
+							},
+						},
+					},
+				},
+			}
+		}
+		respBuffer, err := proto.Marshal(resp)
+		if err != nil {
+			u.logger.Error("Failed to marshal response", "error", err)
+		}
 		_, err = conn.WriteToUDP(respBuffer, remoteAddr)
 		if err != nil {
 			u.logger.Error("Error responding to client", "error", err)

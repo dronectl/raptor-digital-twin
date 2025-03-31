@@ -19,3 +19,8 @@ proto:
 		--go_opt=Mraptor/v1/stream.proto=github.com/dronectl/rdt/$(GEN_DIR)/raptor/v1 \
 		$(PROTO_DIR)/raptor/v1/*.proto
 
+
+.PHONY: fmt
+fmt:
+	gofmt -s -w .
+
