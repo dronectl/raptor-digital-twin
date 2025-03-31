@@ -1,16 +1,19 @@
 package device
 
 import (
-    "os"
-    "log"
     "time"
+    "log/slog"
     "github.com/google/uuid"
 
     "github.com/dronectl/rdt/internal/common"
 )
 
+type DeviceOpts struct {
+    UpdateFrequency uint32
+}
+
 type Device struct {
-    logger *log.Logger
+    logger *slog.Logger
 
     name string
     uuid string
@@ -27,29 +30,29 @@ func (d *Device) runner() {
     for {
         select {
             case ptReadings := <- d.powertrainReadings:
-                d.logger.Println("received powertrain readings", ptReadings)
+                d.logger.Info("Received powertrain payload", "powertrain", ptReadings)
             case envReadings := <- d.envReadings:
-                d.logger.Println("received env readings", envReadings)
+                d.logger.Info("Received environment payload", "environment", envReadings)
         }
         time.Sleep(time.Duration(1000/d.updateFrequency) * time.Millisecond)
     }
 }
 
 func (d *Device) Start() {
-    d.logger.Println("Starting device emulator")
+    d.logger.Info("Starting device emulator")
     d.runner()
 }
 
-func NewDevice(updateFrequency uint32, control chan<- common.SimControl, powertrainReadings <-chan common.PowertrainReadings, envReadings <-chan common.EnvironmentReadings) *Device {
+func NewDevice(control chan<- common.SimControl, powertrainReadings <-chan common.PowertrainReadings, envReadings <-chan common.EnvironmentReadings, opts *DeviceOpts) *Device {
     device := Device{
         name: "hungry-velociraptor",
         uuid: uuid.NewString(),
-        logger: log.New(os.Stdout, "", log.Lshortfile | log.Lmicroseconds),
-        updateFrequency: updateFrequency,
+        logger: slog.Default(),
+        updateFrequency: opts.UpdateFrequency,
         control: control,
         powertrainReadings: powertrainReadings,
         envReadings: envReadings,
     }
-    device.logger.Println("New device created with UUID", device.uuid)
+    device.logger.Info("New device created", "uuid", device.uuid)
     return &device
 }

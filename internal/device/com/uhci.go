@@ -8,30 +8,31 @@ package com
 
 import (
 	"fmt"
-	"log"
 	"net"
-	"os"
+	"log/slog"
 
 	v1 "github.com/dronectl/rdt/gen/raptor/v1"
-    proto "google.golang.org/protobuf/proto"
+	proto "google.golang.org/protobuf/proto"
 )
 
 type UHCICtx struct {
-    logger *log.Logger
+    logger *slog.Logger
     conn *net.UDPConn
     addr *net.UDPAddr
 }
 
 func (u *UHCICtx) startDiscoveryService() error {
-    u.logger.Printf("Starting UDP discovery service on port %d", v1.UHCIPort_UHCI_PORT_DISCOVERY)
+    u.logger.Info("Starting UDP discovery service", "port", v1.UHCIPort_UHCI_PORT_DISCOVERY)
     addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", v1.UHCIPort_UHCI_PORT_DISCOVERY))
     if err != nil {
-        u.logger.Fatalln("Error resolving address:", err)
+        u.logger.Error("Error resolving address:", "err", err)
+        return err
     }
 
     conn, err := net.ListenUDP("udp", addr)
     if err != nil {
-        u.logger.Fatalln("Error creating connection:", err)
+        u.logger.Error("Error creating connection:", "err", err)
+        return err
     }
     defer conn.Close()
     fmt.Println("UDP server is up and listening on port 8080")
@@ -40,7 +41,7 @@ func (u *UHCICtx) startDiscoveryService() error {
     for {
         n, remoteAddr, err := conn.ReadFromUDP(buffer)
         if err != nil {
-            fmt.Println("Error reading from UDP connection:", err)
+            u.logger.Warn("Error reading from UDP connection:", "error", err)
             continue
         }
         fmt.Printf("Received message from %s: %s\n", remoteAddr, string(buffer[:n]))
@@ -57,22 +58,22 @@ func (u *UHCICtx) handleConnection(conn net.Conn) {
     buf := make([]byte, 1024)
     _, err := conn.Read(buf)
     if err != nil {
-        u.logger.Println(err)
+        u.logger.Error("Failed to read from connection:", "error", err)
         return
     }
 
-    u.logger.Printf("Received: %s", buf)
+    u.logger.Info("Received:", "buf", buf)
     req := &v1.UHCIBaseRequest{}
     if err := proto.Unmarshal(buf, req); err != nil {
-        log.Println("Failed to parse address book:", err)
+        u.logger.Error("Failed to parse address book:", "error", err)
     }
-    u.logger.Printf("Marshalled: %t", req)
+    u.logger.Info("Marshalled: ", "req", req)
 }
 
 func (u *UHCICtx) startCommandService() error {
-    u.logger.Println("Starting TCP command service")
+    u.logger.Info("Starting TCP command service")
     // Listen for incoming connections on port 8080
-    ln, err := net.Listen("tcp", fmt.Sprintf(":%u", v1.UHCIPort_UHCI_PORT_COMMAND))
+    ln, err := net.Listen("tcp", fmt.Sprintf(":%d", v1.UHCIPort_UHCI_PORT_COMMAND))
     if err != nil {
         fmt.Println(err)
         return err
@@ -99,6 +100,6 @@ func (u *UHCICtx) Start() error {
 
 func NewUHCI() *UHCICtx {
     return &UHCICtx{
-        logger: log.New(os.Stdout, "UHCI: ", log.LstdFlags),
+        logger: slog.Default(),
     }
 }

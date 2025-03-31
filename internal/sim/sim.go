@@ -1,16 +1,20 @@
 package sim
 
 import (
-    "os"
-	"log"
 	"time"
+    "log/slog"
 
 	common "github.com/dronectl/rdt/internal/common"
 	powertrain "github.com/dronectl/rdt/internal/sim/powertrain"
 )
 
+type SimOpts struct {
+    UpdateFrequency uint32
+    SamplePrescaler uint8
+}
+
 type SimCtx struct {
-    logger *log.Logger
+    logger *slog.Logger
     // configurability layer
     envParameters common.EnvParameters
     propellerParameters common.PropellerParameters
@@ -36,7 +40,7 @@ func (s *SimCtx) runner() {
         // non-blocking read
         select {
             case cmd = <- s.control:
-                s.logger.Println("Sim: Received command ", cmd)
+                s.logger.Info("Sim: Received", "command", cmd)
             default:
         }
         if cmd == common.SIM_CMD_STOP {
@@ -52,22 +56,22 @@ func (s *SimCtx) runner() {
         }
         time.Sleep(time.Duration(1000/s.updateFrequency) * time.Millisecond)
     }
-    s.logger.Println("Exited simulation")
+    s.logger.Info("Exited simulation")
 }
 
 func (s *SimCtx) Start() {
-    s.logger.Println("Starting simulation backend")
+    s.logger.Info("Starting simulation backend")
     go s.runner()
 }
 
-func NewSimCtx(updateFrequency uint32, samplePrescaler uint8, control <-chan common.SimControl, powertrainReadings chan<- common.PowertrainReadings, envReadings chan<- common.EnvironmentReadings) *SimCtx {
+func NewSimCtx(control <-chan common.SimControl, powertrainReadings chan<- common.PowertrainReadings, envReadings chan<- common.EnvironmentReadings, opts *SimOpts) *SimCtx {
     simCtx:= SimCtx{
-        logger: log.New(os.Stdout, "", log.Lshortfile | log.Lmicroseconds),
+        logger: slog.Default(),
         bldcParameters: common.DefaultBldcParameters,
         envParameters: common.DefaultEnvParameters,
         propellerParameters: common.DefaultPropellerParameters,
-        samplePrescaler: samplePrescaler,
-        updateFrequency: updateFrequency,
+        samplePrescaler: opts.SamplePrescaler,
+        updateFrequency: opts.UpdateFrequency,
         control: control,
         powertrainReadings: powertrainReadings,
         envReadings: envReadings,
